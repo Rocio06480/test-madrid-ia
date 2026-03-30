@@ -49,7 +49,7 @@ def hablar_con_ia(mensaje_usuario, tipo_operacion):
         mensajes_ia.append({"role": "user", "content": mensaje_usuario})
         
         # 3. Llamamos a la IA (usando el modelo más estable)
-        completion = client.chat.completion.create(
+        completion = client.chat.completions.create(
             messages=mensajes_ia,
             model="llama-3.3-70b-versatile",
             temperature=0.6
