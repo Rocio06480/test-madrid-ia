@@ -1,7 +1,6 @@
 streamlit
 pandas
-joblib
-scikit-learn
 numpy
+joblib
 groq
 tensorflow
