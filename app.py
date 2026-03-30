@@ -1,0 +1,90 @@
+import streamlit as st
+import joblib
+import pandas as pd
+import numpy as np
+from groq import Groq
+import tensorflow as tf
+
+# 1. CONFIGURACIÓN DE LA PÁGINA
+st.set_page_config(page_title="IA Inmobiliaria Madrid", page_icon="🏠")
+
+# 2. CARGA DE MODELOS (Versión Deep Learning - Keras)
+@st.cache_resource
+def cargar_recursos():
+    try:
+        # Carga del preprocesador (transformación de datos)
+        prep = joblib.load('preprocessor.joblib')
+        
+        # Carga de redes neuronales (.keras)
+        mod_buy = tf.keras.models.load_model('modelo_compra_definitivo.keras')
+        mod_rent = tf.keras.models.load_model('modelo_alquiler_dl.keras')
+        
+        return prep, mod_buy, mod_rent, True
+    except Exception as e:
+        return None, None, None, False
+
+preprocessor, m_buy, m_rent, modelos_listos = cargar_recursos()
+
+# 3. LÓGICA DE INTELIGENCIA ARTIFICIAL (Groq Cloud)
+def hablar_con_ia(mensaje_usuario, tipo_operacion):
+    try:
+        # Recuperamos la clave de los Secrets de Streamlit por seguridad
+        api_key = st.secrets["GROQ_API_KEY"]
+        client = Groq(api_key=api_key)
+        
+        instrucciones = (
+            f"Eres un asesor inmobiliario experto en Madrid. El usuario está interesado en {tipo_operacion}. "
+            "Tu objetivo es ser amable, profesional y extraer datos como barrio, habitaciones y baños. "
+            "Responde de forma natural y cercana."
+        )
+        
+        completion = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": instrucciones},
+                {"role": "user", "content": mensaje_usuario}
+            ],
+            model="llama3-8b-8192",
+        )
+        return completion.choices[0].message.content
+    except KeyError:
+        return " Error: No se encontró la 'GROQ_API_KEY' en la configuración (Secrets)."
+    except Exception as e:
+        return f"Error de conexión con la IA: {str(e)}"
+
+# 4. DISEÑO DE LA INTERFAZ (Sidebar)
+with st.sidebar:
+    st.header("Panel de Control")
+    modo = st.radio("Selecciona operación:", ["Compra 💰", "Alquiler 🔑"])
+    st.write("---")
+    
+    if modelos_listos:
+        st.success("Sistemas conectados ")
+        st.caption("Motores Deep Learning activos.")
+    else:
+        st.error("Error: Archivos de modelo no encontrados.")
+
+# 5. CUERPO PRINCIPAL Y CHAT
+st.title("Asistente Inmobiliario Inteligente")
+st.info(f"Actualmente analizando el mercado de **{modo.lower()}** en Madrid.")
+
+# Inicializar historial de chat
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Mostrar mensajes anteriores
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Entrada de usuario
+if prompt := st.chat_input("Ej: Busco un piso en Chamberí con 2 habitaciones..."):
+    # Añadir mensaje del usuario al historial
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # Generar respuesta de la IA
+    with st.chat_message("assistant"):
+        respuesta = hablar_con_ia(prompt, modo)
+        st.markdown(respuesta)
+        st.session_state.messages.append({"role": "assistant", "content": respuesta})
