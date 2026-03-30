@@ -43,7 +43,7 @@ def hablar_con_ia(mensaje_usuario, tipo_operacion):
                 {"role": "system", "content": instrucciones},
                 {"role": "user", "content": mensaje_usuario}
             ],
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant"
         )
         return completion.choices[0].message.content
     except KeyError:
