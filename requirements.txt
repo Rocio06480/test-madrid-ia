@@ -4,4 +4,4 @@ numpy
 joblib
 groq
 tensorflow
-import json
+protobuf==3.20.3
